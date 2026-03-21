@@ -5,5 +5,6 @@ public enum VehicleStatus {
     AVAILABLE,
     UNAVAILABLE,
     SLEEPING,
-    BROKEN_DOWN
+    BROKEN_DOWN,
+    ARCHIVED
 }
