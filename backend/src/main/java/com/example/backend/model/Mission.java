@@ -22,10 +22,10 @@ public class Mission {
 
     // Début de mission
     @Column(nullable = false)
-    private LocalDateTime start;
+    private LocalDateTime startTime;
 
     // Fin prévue ou réelle
-    private LocalDateTime end;
+    private LocalDateTime endTime;
 
     @Enumerated(EnumType.STRING)
     private MissionStatus status;
