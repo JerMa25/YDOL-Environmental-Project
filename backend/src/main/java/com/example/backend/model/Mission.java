@@ -1,5 +1,6 @@
 package com.example.backend.model;
 
+import com.example.backend.model.enums.MissionPurpose;
 import com.example.backend.model.enums.MissionStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -29,6 +30,9 @@ public class Mission {
 
     @Enumerated(EnumType.STRING)
     private MissionStatus status;
+
+    @Enumerated(EnumType.STRING)
+    private MissionPurpose purpose;
 
     // Chauffeur qui exécute la mission
     @ManyToOne

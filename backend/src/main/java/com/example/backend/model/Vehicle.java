@@ -20,6 +20,11 @@ public class Vehicle {
 
     @Column(unique = true, nullable = false)
     private String immatriculation;
+    private String photo;
+    private String name;
+    private double maxCapacity;
+    private String brand;
+    private String modele;
 
     private double latitude;
     private double longitude;

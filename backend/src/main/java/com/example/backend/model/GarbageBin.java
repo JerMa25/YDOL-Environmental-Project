@@ -19,9 +19,11 @@ public class GarbageBin {
     private UUID id;
 
     private String code;
+    private String photo;
 
     private String town;
     private String quarter;
+    private String description;
 
     private double latitude;
     private double longitude;

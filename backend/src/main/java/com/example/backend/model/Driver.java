@@ -1,5 +1,7 @@
 package com.example.backend.model;
 
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,11 +13,15 @@ import java.time.LocalDate;
 @Entity
 @Getter
 @Setter
+@AttributeOverride(
+        name = "name",                 // le champ de la super-classe
+        column = @Column(name = "firstname")  // ← nom de colonne dans cette table
+)
 @NoArgsConstructor
 @AllArgsConstructor
 public class Driver extends User {
 
-    private String surname;
+    private String lastname;
 
     private String town;
     private String quarter;
