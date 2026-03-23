@@ -1,7 +1,7 @@
 package com.example.backend.security;
 
 import com.example.backend.repository.AdminRepository;
-import com.example.backend.repository.ClientRepository;
+import com.example.backend.repository.IndividualClientRepository;
 import com.example.backend.repository.DriverRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -18,7 +18,7 @@ import java.util.List;
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final AdminRepository adminRepository;
-    private final ClientRepository clientRepository;
+    private final IndividualClientRepository clientRepository;
     private final DriverRepository driverRepository;
 
     @Override

@@ -1,57 +1,105 @@
 package com.example.backend.controller;
 
-import com.example.backend.dto.client.ClientRequest;
-import com.example.backend.dto.client.ClientResponse;
-import com.example.backend.service.ClientService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.example.backend.model.Client;
+import com.example.backend.model.IndividualClient;
+import com.example.backend.repository.EnterpriseRepository;
+import com.example.backend.repository.IndividualClientRepository;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/clients")
-@RequiredArgsConstructor
-@Tag(name = "Clients", description = "Gestion des clients")
-@SecurityRequirement(name = "bearerAuth")
+@CrossOrigin(origins = "*")
 public class ClientController {
 
-    private final ClientService clientService;
+    private final IndividualClientRepository individualClientRepository;
+    private final EnterpriseRepository enterpriseRepository;
 
-    @GetMapping
-    @Operation(summary = "Liste des clients", description = "Retourne la liste des clients actifs")
-    public ResponseEntity<List<ClientResponse>> getAll() {
-        return ResponseEntity.ok(clientService.getAll());
+    public ClientController(IndividualClientRepository individualClientRepository, EnterpriseRepository enterpriseRepository) {
+        this.individualClientRepository = individualClientRepository;
+        this.enterpriseRepository = enterpriseRepository;
     }
 
-    @GetMapping("/count")
-    @Operation(summary = "Nombre de clients", description = "Retourne le nombre de clients actifs")
-    public ResponseEntity<Long> getCount() {
-        long count = clientService.getAll().size();
-        return ResponseEntity.ok(count);
+    @GetMapping
+    public ResponseEntity<List<Client>> getAllClients() {
+        List<Client> allClients = Stream.concat(
+                individualClientRepository.findAll().stream(),
+                enterpriseRepository.findAll().stream()
+        ).collect(Collectors.toList());
+        return ResponseEntity.ok(allClients);
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Détails d'un client", description = "Retourne les détails d'un client")
-    public ResponseEntity<ClientResponse> getById(@PathVariable UUID id) {
-        return ResponseEntity.ok(clientService.getById(id));
+    public ResponseEntity<Client> getClientById(@PathVariable UUID id) {
+        // Try individual client first
+        var individualClient = individualClientRepository.findById(id);
+        if (individualClient.isPresent()) {
+            return ResponseEntity.ok(individualClient.get());
+        }
+        // Try enterprise client
+        var enterpriseClient = enterpriseRepository.findById(id);
+        return enterpriseClient.<ResponseEntity<Client>>map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<Client> createClient(@Valid @RequestBody IndividualClient client) {
+        Client saved = individualClientRepository.save(client);
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Mettre à jour un client", description = "Met à jour un client")
-    public ResponseEntity<ClientResponse> update(@PathVariable UUID id, @Valid @RequestBody ClientRequest request) {
-        return ResponseEntity.ok(clientService.update(id, request));
+    public ResponseEntity<Client> updateClient(@PathVariable UUID id, @RequestBody Client payload) {
+        // Try individual client first
+        var individualClientOpt = individualClientRepository.findById(id);
+        if (individualClientOpt.isPresent()) {
+            var existing = individualClientOpt.get();
+            existing.setName(payload.getName());
+            existing.setEmail(payload.getEmail());
+            existing.setPhone(payload.getPhone());
+            existing.setTown(payload.getTown());
+            existing.setQuarter(payload.getQuarter());
+            existing.setStatus(payload.getStatus());
+            return ResponseEntity.ok(individualClientRepository.save(existing));
+        }
+        // Try enterprise client
+        var enterpriseClientOpt = enterpriseRepository.findById(id);
+        if (enterpriseClientOpt.isPresent()) {
+            var existing = enterpriseClientOpt.get();
+            existing.setName(payload.getName());
+            existing.setEmail(payload.getEmail());
+            existing.setPhone(payload.getPhone());
+            existing.setTown(payload.getTown());
+            existing.setQuarter(payload.getQuarter());
+            existing.setStatus(payload.getStatus());
+            return ResponseEntity.ok(enterpriseRepository.save(existing));
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Archiver un client", description = "Archive un client")
-    public ResponseEntity<Void> archive(@PathVariable UUID id) {
-        clientService.archive(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> archiveClient(@PathVariable UUID id) {
+        // Try individual client first
+        var individualClientOpt = individualClientRepository.findById(id);
+        if (individualClientOpt.isPresent()) {
+            var existing = individualClientOpt.get();
+            existing.setStatus("ARCHIVED");
+            individualClientRepository.save(existing);
+            return ResponseEntity.noContent().build();
+        }
+        // Try enterprise client
+        var enterpriseClientOpt = enterpriseRepository.findById(id);
+        if (enterpriseClientOpt.isPresent()) {
+            var existing = enterpriseClientOpt.get();
+            existing.setStatus("ARCHIVED");
+            enterpriseRepository.save(existing);
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }

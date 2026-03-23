@@ -1,57 +1,59 @@
 package com.example.backend.controller;
 
-import com.example.backend.dto.vehicle.VehicleRequest;
-import com.example.backend.dto.vehicle.VehicleResponse;
-import com.example.backend.service.VehicleService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.example.backend.model.Vehicle;
+import com.example.backend.repository.VehicleRepository;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/vehicles")
-@RequiredArgsConstructor
-@Tag(name = "Vehicles", description = "Gestion des véhicules")
-@SecurityRequirement(name = "bearerAuth")
+@CrossOrigin(origins = "*")
 public class VehicleController {
 
-    private final VehicleService vehicleService;
+    private final VehicleRepository vehicleRepository;
 
-    @GetMapping
-    @Operation(summary = "Liste des véhicules", description = "Liste tous les véhicules actifs")
-    public ResponseEntity<List<VehicleResponse>> getAll() {
-        return ResponseEntity.ok(vehicleService.getAll());
+    public VehicleController(VehicleRepository vehicleRepository) {
+        this.vehicleRepository = vehicleRepository;
     }
 
-    @GetMapping("/count")
-    @Operation(summary = "Nombre de véhicules", description = "Retourne le nombre de véhicules actifs")
-    public ResponseEntity<Long> getCount() {
-        long count = vehicleService.getAll().size();
-        return ResponseEntity.ok(count);
+    @GetMapping
+    public ResponseEntity<List<Vehicle>> getAllVehicles() {
+        return ResponseEntity.ok(vehicleRepository.findAll());
     }
 
     @PostMapping
-    @Operation(summary = "Ajouter un véhicule", description = "Ajoute un véhicule")
-    public ResponseEntity<VehicleResponse> create(@Valid @RequestBody VehicleRequest request) {
-        return ResponseEntity.status(201).body(vehicleService.create(request));
+    public ResponseEntity<Vehicle> createVehicle(@Valid @RequestBody Vehicle vehicle) {
+        return ResponseEntity.ok(vehicleRepository.save(vehicle));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Mettre à jour un véhicule", description = "Met à jour un véhicule")
-    public ResponseEntity<VehicleResponse> update(@PathVariable UUID id, @Valid @RequestBody VehicleRequest request) {
-        return ResponseEntity.ok(vehicleService.update(id, request));
+    public ResponseEntity<Vehicle> updateVehicle(@PathVariable UUID id, @RequestBody Vehicle payload) {
+        return vehicleRepository.findById(id)
+                .map(existing -> {
+                    existing.setImmatriculation(payload.getImmatriculation());
+                    existing.setLatitude(payload.getLatitude());
+                    existing.setLongitude(payload.getLongitude());
+                    existing.setAltitude(payload.getAltitude());
+                    existing.setSpeed(payload.getSpeed());
+                    existing.setStatus(payload.getStatus());
+                    existing.setDriver(payload.getDriver());
+                    return ResponseEntity.ok(vehicleRepository.save(existing));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Archiver un véhicule", description = "Archive un véhicule")
-    public ResponseEntity<Void> archive(@PathVariable UUID id) {
-        vehicleService.archive(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> archiveVehicle(@PathVariable UUID id) {
+        return vehicleRepository.findById(id)
+                .map(existing -> {
+                    existing.setStatus(com.example.backend.model.enums.VehicleStatus.OUT_OF_SERVICE);
+                    vehicleRepository.save(existing);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }

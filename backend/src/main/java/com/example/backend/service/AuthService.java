@@ -4,7 +4,7 @@ import com.example.backend.dto.auth.*;
 import com.example.backend.model.IndividualClient;
 import com.example.backend.model.PasswordResetToken;
 import com.example.backend.model.enums.ClientType;
-import com.example.backend.repository.ClientRepository;
+import com.example.backend.repository.IndividualClientRepository;
 import com.example.backend.repository.PasswordResetTokenRepository;
 import com.example.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ import java.util.UUID;
 @Slf4j
 public class AuthService {
 
-    private final ClientRepository clientRepository;
+    private final IndividualClientRepository clientRepository;
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -49,7 +49,7 @@ public class AuthService {
         }
         IndividualClient client = new IndividualClient();
         client.setName(request.getName());
-        client.setSurname(request.getSurname());
+        client.setLastname(request.getLastname());
         client.setEmail(request.getEmail());
         client.setPassword(passwordEncoder.encode(request.getPassword()));
         client.setPhone(request.getPhone());

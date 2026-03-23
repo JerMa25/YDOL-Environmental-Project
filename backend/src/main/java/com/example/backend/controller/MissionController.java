@@ -1,56 +1,60 @@
 package com.example.backend.controller;
 
-import com.example.backend.dto.mission.MissionRequest;
-import com.example.backend.dto.mission.MissionResponse;
-import com.example.backend.service.MissionService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.example.backend.model.Mission;
+import com.example.backend.repository.MissionRepository;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/missions")
-@RequiredArgsConstructor
-@Tag(name = "Missions", description = "Gestion des missions de collecte")
-@SecurityRequirement(name = "bearerAuth")
+@CrossOrigin(origins = "*")
 public class MissionController {
 
-    private final MissionService missionService;
+    private final MissionRepository missionRepository;
 
-    @GetMapping
-    @Operation(summary = "Liste des missions", description = "Retourne la liste des missions actives")
-    public ResponseEntity<List<MissionResponse>> getAll() {
-        return ResponseEntity.ok(missionService.getAll());
+    public MissionController(MissionRepository missionRepository) {
+        this.missionRepository = missionRepository;
     }
 
-    @GetMapping("/count")
-    @Operation(summary = "Nombre de missions", description = "Retourne le nombre de missions actives")
-    public ResponseEntity<Long> getCount() {
-        long count = missionService.getAll().size();
-        return ResponseEntity.ok(count);
+    @GetMapping
+    public ResponseEntity<List<Mission>> getAllMissions() {
+        return ResponseEntity.ok(missionRepository.findAll());
     }
 
     @PostMapping
-    @Operation(summary = "Créer une mission", description = "Crée une mission de collecte")
-    public ResponseEntity<MissionResponse> create(@Valid @RequestBody MissionRequest request) {
-        return ResponseEntity.status(201).body(missionService.create(request));
+    public ResponseEntity<Mission> createMission(@Valid @RequestBody Mission mission) {
+        return ResponseEntity.ok(missionRepository.save(mission));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Mettre à jour une mission", description = "Met à jour une mission")
-    public ResponseEntity<MissionResponse> update(@PathVariable Long id, @Valid @RequestBody MissionRequest request) {
-        return ResponseEntity.ok(missionService.update(id, request));
+    public ResponseEntity<Mission> updateMission(@PathVariable Long id, @RequestBody Mission payload) {
+        return missionRepository.findById(id)
+                .map(existing -> {
+                    existing.setStartTime(payload.getStartTime());
+                    existing.setEndTime(payload.getEndTime());
+                    existing.setStatus(payload.getStatus());
+                    existing.setExecutedBy(payload.getExecutedBy());
+                    existing.setOrderedBy(payload.getOrderedBy());
+                    existing.setVehicle(payload.getVehicle());
+                    existing.setCity(payload.getCity());
+                    existing.setDistrict(payload.getDistrict());
+                    existing.setDescription(payload.getDescription());
+                    existing.setPriority(payload.getPriority());
+                    return ResponseEntity.ok(missionRepository.save(existing));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Supprimer / archiver une mission", description = "Supprime ou archive une mission")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        missionService.delete(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteMission(@PathVariable Long id) {
+        return missionRepository.findById(id)
+                .map(existing -> {
+                    missionRepository.delete(existing);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }

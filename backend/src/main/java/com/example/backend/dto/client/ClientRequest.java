@@ -12,7 +12,7 @@ import java.time.LocalDate;
 public class ClientRequest {
     @NotBlank
     private String name;
-    private String surname;
+    private String lastname;
     @NotBlank
     @Email
     private String email;

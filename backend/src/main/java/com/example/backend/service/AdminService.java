@@ -30,7 +30,7 @@ public class AdminService {
     public AdminResponse create(AdminRequest request) {
         Admin admin = new Admin();
         admin.setName(request.getName());
-        admin.setSurname(request.getSurname());
+        admin.setLastname(request.getLastname());
         admin.setEmail(request.getEmail());
         admin.setPhone(request.getPhone());
         admin.setSite(request.getSite());
@@ -47,7 +47,7 @@ public class AdminService {
         Admin admin = adminRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Admin not found: " + id));
         admin.setName(request.getName());
-        admin.setSurname(request.getSurname());
+        admin.setLastname(request.getLastname());
         admin.setEmail(request.getEmail());
         admin.setPhone(request.getPhone());
         admin.setSite(request.getSite());
@@ -71,7 +71,7 @@ public class AdminService {
         return AdminResponse.builder()
                 .id(admin.getId())
                 .name(admin.getName())
-                .surname(admin.getSurname())
+                .lastname(admin.getLastname())
                 .email(admin.getEmail())
                 .phone(admin.getPhone())
                 .site(admin.getSite())

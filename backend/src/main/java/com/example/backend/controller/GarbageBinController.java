@@ -1,58 +1,59 @@
 package com.example.backend.controller;
 
-import com.example.backend.dto.bin.GarbageBinRequest;
-import com.example.backend.dto.bin.GarbageBinResponse;
-import com.example.backend.service.GarbageBinService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.example.backend.model.GarbageBin;
+import com.example.backend.repository.GarbageBinRepository;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/bins")
-@RequiredArgsConstructor
-@Tag(name = "Garbage Bins", description = "Gestion des bacs à ordures")
-@SecurityRequirement(name = "bearerAuth")
+@CrossOrigin(origins = "*")
 public class GarbageBinController {
 
-    private final GarbageBinService binService;
+    private final GarbageBinRepository garbageBinRepository;
 
-    @GetMapping
-    @Operation(summary = "Liste des bacs", description = "Liste tous les bacs à ordures actifs")
-    public ResponseEntity<List<GarbageBinResponse>> getAll() {
-        return ResponseEntity.ok(binService.getAll());
+    public GarbageBinController(GarbageBinRepository garbageBinRepository) {
+        this.garbageBinRepository = garbageBinRepository;
     }
 
-    @GetMapping("/count")
-    @Operation(summary = "Nombre de bacs", description = "Retourne le nombre de bacs actifs")
-    public ResponseEntity<Long> getCount() {
-        long count = binService.getAll().size();
-        return ResponseEntity.ok(count);
+    @GetMapping
+    public ResponseEntity<List<GarbageBin>> getAllBins() {
+        return ResponseEntity.ok(garbageBinRepository.findAll());
     }
 
     @PostMapping
-    @Operation(summary = "Ajouter un bac", description = "Ajoute un nouveau bac à ordures")
-    public ResponseEntity<GarbageBinResponse> create(@Valid @RequestBody GarbageBinRequest request) {
-        return ResponseEntity.status(201).body(binService.create(request));
+    public ResponseEntity<GarbageBin> createBin(@Valid @RequestBody GarbageBin garbageBin) {
+        return ResponseEntity.ok(garbageBinRepository.save(garbageBin));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Mettre à jour un bac", description = "Met à jour un bac à ordures")
-    public ResponseEntity<GarbageBinResponse> update(@PathVariable UUID id,
-            @Valid @RequestBody GarbageBinRequest request) {
-        return ResponseEntity.ok(binService.update(id, request));
+    public ResponseEntity<GarbageBin> updateBin(@PathVariable UUID id, @RequestBody GarbageBin payload) {
+        return garbageBinRepository.findById(id)
+                .map(existing -> {
+                    existing.setCode(payload.getCode());
+                    existing.setTown(payload.getTown());
+                    existing.setQuarter(payload.getQuarter());
+                    existing.setLatitude(payload.getLatitude());
+                    existing.setLongitude(payload.getLongitude());
+                    existing.setAltitude(payload.getAltitude());
+                    existing.setStatus(payload.getStatus());
+                    return ResponseEntity.ok(garbageBinRepository.save(existing));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Archiver un bac", description = "Archive un bac à ordures")
-    public ResponseEntity<Void> archive(@PathVariable UUID id) {
-        binService.archive(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> archiveBin(@PathVariable UUID id) {
+        return garbageBinRepository.findById(id)
+                .map(existing -> {
+                    existing.setStatus(com.example.backend.model.enums.GarbageBinStatus.OUT_OF_SERVICE);
+                    garbageBinRepository.save(existing);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }

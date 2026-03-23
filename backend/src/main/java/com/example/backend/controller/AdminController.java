@@ -1,57 +1,58 @@
 package com.example.backend.controller;
 
-import com.example.backend.dto.admin.AdminRequest;
-import com.example.backend.dto.admin.AdminResponse;
-import com.example.backend.service.AdminService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.example.backend.model.Admin;
+import com.example.backend.repository.AdminRepository;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admins")
-@RequiredArgsConstructor
-@Tag(name = "Admins", description = "Gestion des administrateurs")
-@SecurityRequirement(name = "bearerAuth")
+@CrossOrigin(origins = "*")
 public class AdminController {
 
-    private final AdminService adminService;
+    private final AdminRepository adminRepository;
 
-    @GetMapping
-    @Operation(summary = "Liste des admins", description = "Retourne la liste de tous les administrateurs actifs")
-    public ResponseEntity<List<AdminResponse>> getAll() {
-        return ResponseEntity.ok(adminService.getAll());
+    public AdminController(AdminRepository adminRepository) {
+        this.adminRepository = adminRepository;
     }
 
-    @GetMapping("/count")
-    @Operation(summary = "Nombre d'administrateurs", description = "Retourne le nombre d'administrateurs actifs")
-    public ResponseEntity<Long> getCount() {
-        long count = adminService.getAll().size();
-        return ResponseEntity.ok(count);
+    @GetMapping
+    public ResponseEntity<List<Admin>> getAllAdmins() {
+        return ResponseEntity.ok(adminRepository.findAll());
     }
 
     @PostMapping
-    @Operation(summary = "Créer un admin", description = "Permet au SUPER ADMIN de créer un nouvel administrateur")
-    public ResponseEntity<AdminResponse> create(@Valid @RequestBody AdminRequest request) {
-        return ResponseEntity.status(201).body(adminService.create(request));
+    public ResponseEntity<Admin> createAdmin(@Valid @RequestBody Admin admin) {
+        return ResponseEntity.ok(adminRepository.save(admin));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Mettre à jour un admin", description = "Met à jour les informations d'un administrateur")
-    public ResponseEntity<AdminResponse> update(@PathVariable UUID id, @Valid @RequestBody AdminRequest request) {
-        return ResponseEntity.ok(adminService.update(id, request));
+    public ResponseEntity<Admin> updateAdmin(@PathVariable UUID id, @RequestBody Admin payload) {
+        return adminRepository.findById(id)
+                .map(existing -> {
+                    existing.setName(payload.getName());
+                    existing.setEmail(payload.getEmail());
+                    existing.setPhone(payload.getPhone());
+                    existing.setSite(payload.getSite());
+                    existing.setRole(payload.getRole());
+                    existing.setStatus(payload.getStatus());
+                    return ResponseEntity.ok(adminRepository.save(existing));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Archiver un admin", description = "Archive un administrateur (soft delete)")
-    public ResponseEntity<Void> archive(@PathVariable UUID id) {
-        adminService.archive(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> archiveAdmin(@PathVariable UUID id) {
+        return adminRepository.findById(id)
+                .map(existing -> {
+                    existing.setStatus("ARCHIVED");
+                    adminRepository.save(existing);
+                    return ResponseEntity.noContent().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }
