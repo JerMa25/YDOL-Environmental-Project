@@ -1,12 +1,46 @@
-// API calls
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+import axios from 'axios';
 
-export const api = {
-  get: (endpoint) => fetch(`${API_BASE_URL}${endpoint}`).then(res => res.json()),
-  post: (endpoint, data) => fetch(`${API_BASE_URL}${endpoint}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  }).then(res => res.json()),
-  // Add more methods as needed
+export const baseURL = "http://localhost:8080/api";
+export const backendURL = "http://localhost:8080";
+
+export const getImageURL = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${backendURL}${path.startsWith('/') ? '' : '/'}${path}`;
 };
+
+const api = axios.create({
+  baseURL,
+  headers: {
+    "Content-Type": "application/json"
+  },
+  withCredentials: true,
+});
+
+// Intercepteur pour ajouter token automatiquement
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Intercepteur pour gérer erreurs globalement
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expiré - rediriger vers login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/Connexion';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
