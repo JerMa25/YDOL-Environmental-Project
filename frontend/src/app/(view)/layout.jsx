@@ -12,7 +12,8 @@ export default function DashboardLayout({ children }) {
     site: "Centre Collecte Yaoundé",
     city: "Yaoundé",
     phone: "655 143 266",
-    role: "SUPER_ADMIN"
+    //role: "SUPER_ADMIN"
+    role: "UTILISATEUR"
   };
 
   const getSidebar = () => {
@@ -26,21 +27,28 @@ export default function DashboardLayout({ children }) {
   return (
     <div className="flex h-screen overflow-hidden">
 
-      <aside className="h-screen sticky top-0 overflow-y-auto border-r border-gray-200">
+      {/* SIDEBAR */}
+      <div className="flex-shrink-0">
         {getSidebar()}
-      </aside>
+      </div>
 
-      <div className="flex flex-col flex-1">
+      {/* CONTENU PRINCIPAL */}
+      <div className="flex flex-col flex-1 h-full">
 
-        <header className="sticky top-0 z-10 w-full bg-white border-b border-gray-200 shadow-sm">
+        {/* HEADER */}
+        <div className="flex-shrink-0">
           <Header user={user} />
-        </header>
+        </div>
 
-        <main className="p-8 flex-1 bg-gray-50">
+        {/* CONTENU SCROLLABLE */}
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-8">
           {children}
         </main>
 
-        <Footer />
+        {/* FOOTER */}
+        <div className="flex-shrink-0">
+          <Footer />
+        </div>
 
       </div>
 
