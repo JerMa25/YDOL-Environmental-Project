@@ -1,15 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Calendar, Clock, RefreshCw,
   MessageSquare, Trash2,
   CheckCircle, History, X
 } from "lucide-react";
 
+// ───────── API CONFIG ─────────
+const API_BASE = "http://localhost:8080/api";
+
+const API = {
+  profil: `${API_BASE}/citoyen/profil`,
+  collectes: `${API_BASE}/collectes-vip`,
+};
+
 export default function CollecteVIP() {
 
+  // ───────── STATES ─────────
   const [collectes, setCollectes] = useState([]);
+  const [citoyen, setCitoyen] = useState(null);
+
   const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -25,23 +36,79 @@ export default function CollecteVIP() {
     "mensuelle"
   ];
 
-  // ───────── SUBMIT ─────────
-  const handleSubmit = () => {
+  // ───────── LOAD DATA ─────────
+  useEffect(() => {
+    fetchProfil();
+    fetchCollectes();
+  }, []);
+
+  const fetchProfil = async () => {
+    try {
+      const res = await fetch(API.profil);
+      const data = await res.json();
+      setCitoyen(data);
+    } catch (err) {
+      console.error("Erreur profil", err);
+    }
+  };
+
+  const fetchCollectes = async () => {
+    try {
+      const res = await fetch(`${API.collectes}?citoyenId=1`);
+      const data = await res.json();
+      setCollectes(data);
+    } catch (err) {
+      console.error("Erreur collectes", err);
+    }
+  };
+
+  // ───────── CREATE ─────────
+  const handleSubmit = async () => {
     if (!date || !heure) return;
 
     setLoading(true);
 
-    setTimeout(() => {
-      setCollectes(prev => [
-        { id: Date.now(), date, heure, frequence, note },
-        ...prev
-      ]);
+    try {
+      const res = await fetch(API.collectes, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          citoyenId: 1,
+          date,
+          heure,
+          frequence,
+          noteChaufeur: note,
+        }),
+      });
 
-      setLoading(false);
+      if (!res.ok) throw new Error();
+
+      const nouvelle = await res.json();
+      setCollectes(prev => [nouvelle, ...prev]);
+
       setDate("");
       setHeure("");
       setNote("");
-    }, 800);
+
+    } catch (err) {
+      console.error("Erreur création", err);
+    }
+
+    setLoading(false);
+  };
+
+  // ───────── DELETE ─────────
+  const handleDelete = async (id) => {
+    try {
+      await fetch(`${API.collectes}/${id}`, {
+        method: "DELETE",
+      });
+
+      setCollectes(prev => prev.filter(c => c.id !== id));
+
+    } catch (err) {
+      console.error("Erreur suppression", err);
+    }
   };
 
   // ───────── UI ─────────
@@ -52,20 +119,25 @@ export default function CollecteVIP() {
 
         {/* HEADER */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-xl font-black text-green-800">
-            Collecte VIP
-          </h1>
+          <div>
+            <h1 className="text-xl font-black text-green-800">
+              Collecte VIP
+            </h1>
+            <p className="text-xs text-gray-400">
+              {citoyen?.adresse || "Chargement..."}
+            </p>
+          </div>
 
           <button
             onClick={() => setShowHistory(true)}
-            className="flex items-center gap-2 text-sm bg-green-700 text-white border px-4 py-2 rounded-xl hover:bg-green-50 transition"
+            className="flex items-center gap-2 text-sm bg-white border px-4 py-2 rounded-xl hover:bg-green-50 transition"
           >
             <History size={16} />
             Historique
           </button>
         </div>
 
-        {/* FORMULAIRE DIRECT */}
+        {/* FORMULAIRE */}
         <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
 
           <h2 className="font-bold mb-5 text-gray-800">
@@ -88,7 +160,7 @@ export default function CollecteVIP() {
               </div>
             </div>
 
-            {/* HEURE LIBRE */}
+            {/* HEURE */}
             <div>
               <label className="text-xs text-gray-400">Heure</label>
               <div className="relative">
@@ -159,7 +231,7 @@ export default function CollecteVIP() {
           </div>
         </div>
 
-        {/* LISTE RAPIDE */}
+        {/* LISTE RECENTE */}
         <div className="bg-white rounded-xl border p-4">
 
           <h3 className="font-bold mb-3 text-gray-800">
@@ -168,10 +240,10 @@ export default function CollecteVIP() {
 
           {collectes.length === 0 ? (
             <p className="text-gray-400 text-sm text-center py-6">
-              Aucune collecte pour le moment
+              Aucune collecte
             </p>
           ) : (
-            collectes.slice(0,3).map(c => (
+            collectes.slice(0, 3).map(c => (
               <div key={c.id} className="flex justify-between py-2 border-b">
 
                 <div>
@@ -180,7 +252,7 @@ export default function CollecteVIP() {
                 </div>
 
                 <button
-                  onClick={() => setCollectes(prev => prev.filter(x => x.id !== c.id))}
+                  onClick={() => handleDelete(c.id)}
                   className="text-red-500"
                 >
                   <Trash2 size={16}/>
@@ -195,7 +267,7 @@ export default function CollecteVIP() {
         {showHistory && (
           <div className="fixed inset-0 bg-black/40 flex justify-center items-center z-50">
 
-            <div className="bg-white w-full max-w-md rounded-2xl p-5">
+            <div className="bg-white w-full max-w-md rounded-2xl p-5 max-h-[80vh] overflow-y-auto">
 
               <div className="flex justify-between mb-4">
                 <h2 className="font-bold">Historique</h2>
@@ -208,8 +280,14 @@ export default function CollecteVIP() {
                 </p>
               ) : (
                 collectes.map(c => (
-                  <div key={c.id} className="border-b py-2 text-sm">
-                    {c.date} • {c.heure}
+                  <div key={c.id} className="border-b py-2 text-sm flex justify-between">
+                    <span>{c.date} • {c.heure}</span>
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      className="text-red-500"
+                    >
+                      <Trash2 size={14}/>
+                    </button>
                   </div>
                 ))
               )}
