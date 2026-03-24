@@ -27,6 +27,8 @@ public class AuthService {
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final com.example.backend.repository.AdminRepository adminRepository;
+    private final com.example.backend.repository.DriverRepository driverRepository;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
 
@@ -36,10 +38,21 @@ public class AuthService {
         var userDetails = userDetailsService.loadUserByUsername(request.getEmail());
         String token = jwtService.generateToken(userDetails);
         String role = userDetails.getAuthorities().iterator().next().getAuthority();
+        
+        String name = "";
+        if (role.startsWith("ROLE_ADMIN") || role.startsWith("ROLE_SUPER_ADMIN")) {
+            name = adminRepository.findByEmail(request.getEmail()).map(a -> a.getName()).orElse("");
+        } else if (role.equals("ROLE_DRIVER")) {
+            name = driverRepository.findByEmail(request.getEmail()).map(d -> d.getName()).orElse("");
+        } else if (role.equals("ROLE_CLIENT")) {
+            name = clientRepository.findByEmail(request.getEmail()).map(c -> c.getName()).orElse("");
+        }
+
         return AuthResponse.builder()
                 .token(token)
                 .email(request.getEmail())
                 .role(role)
+                .name(name)
                 .build();
     }
 
@@ -49,7 +62,7 @@ public class AuthService {
         }
         IndividualClient client = new IndividualClient();
         client.setName(request.getName());
-        client.setSurname(request.getSurname());
+        client.setLastname(request.getSurname());
         client.setEmail(request.getEmail());
         client.setPassword(passwordEncoder.encode(request.getPassword()));
         client.setPhone(request.getPhone());

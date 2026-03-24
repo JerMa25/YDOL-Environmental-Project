@@ -47,7 +47,7 @@ public class ClientService {
             client.setPassword(passwordEncoder.encode(request.getPassword()));
         }
         if (client instanceof IndividualClient individual) {
-            individual.setSurname(request.getSurname());
+            individual.setLastname(request.getSurname());
             individual.setDateOfBirth(request.getDateOfBirth());
         }
         return toResponse(clientRepository.save(client));
@@ -73,7 +73,7 @@ public class ClientService {
                 .status(client.getStatus())
                 .createdAt(client.getCreatedAt());
         if (client instanceof IndividualClient individual) {
-            builder.surname(individual.getSurname())
+            builder.surname(individual.getLastname())
                     .dateOfBirth(individual.getDateOfBirth());
         }
         return builder.build();

@@ -28,6 +28,13 @@ public class MissionController {
         return ResponseEntity.ok(missionService.getAll());
     }
 
+    @GetMapping("/my-missions")
+    @Operation(summary = "Mes missions", description = "Retourne la liste des missions assignées au chauffeur connecté")
+    public ResponseEntity<List<MissionResponse>> getMyMissions() {
+        String email = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(missionService.getMissionsByDriverEmail(email));
+    }
+
     @GetMapping("/count")
     @Operation(summary = "Nombre de missions", description = "Retourne le nombre de missions actives")
     public ResponseEntity<Long> getCount() {

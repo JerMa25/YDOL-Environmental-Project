@@ -30,6 +30,9 @@ public class VehicleService {
     public VehicleResponse create(VehicleRequest request) {
         Vehicle vehicle = new Vehicle();
         vehicle.setImmatriculation(request.getImmatriculation());
+        vehicle.setBrand(request.getBrand());
+        vehicle.setModele(request.getModele());
+        vehicle.setMaxCapacity(request.getMaxCapacity());
         vehicle.setLatitude(request.getLatitude());
         vehicle.setLongitude(request.getLongitude());
         vehicle.setAltitude(request.getAltitude());
@@ -46,6 +49,9 @@ public class VehicleService {
         Vehicle vehicle = vehicleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Vehicle not found: " + id));
         vehicle.setImmatriculation(request.getImmatriculation());
+        vehicle.setBrand(request.getBrand());
+        vehicle.setModele(request.getModele());
+        vehicle.setMaxCapacity(request.getMaxCapacity());
         vehicle.setLatitude(request.getLatitude());
         vehicle.setLongitude(request.getLongitude());
         vehicle.setAltitude(request.getAltitude());
@@ -70,6 +76,9 @@ public class VehicleService {
         return VehicleResponse.builder()
                 .id(vehicle.getId())
                 .immatriculation(vehicle.getImmatriculation())
+                .brand(vehicle.getBrand())
+                .modele(vehicle.getModele())
+                .maxCapacity(vehicle.getMaxCapacity())
                 .latitude(vehicle.getLatitude())
                 .longitude(vehicle.getLongitude())
                 .altitude(vehicle.getAltitude())

@@ -12,6 +12,9 @@ import java.util.UUID;
 public class VehicleResponse {
     private UUID id;
     private String immatriculation;
+    private String brand;
+    private String modele;
+    private double maxCapacity;
     private double latitude;
     private double longitude;
     private double altitude;

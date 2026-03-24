@@ -31,6 +31,13 @@ public class MissionService {
                 .collect(Collectors.toList());
     }
 
+    public List<MissionResponse> getMissionsByDriverEmail(String email) {
+        return missionRepository.findByExecutedByEmail(email).stream()
+                .filter(m -> m.getStatus() != MissionStatus.CANCELLED)
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public MissionResponse create(MissionRequest request) {
         Mission mission = new Mission();
         mission.setStartTime(request.getStart());

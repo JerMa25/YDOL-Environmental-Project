@@ -2,256 +2,234 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2, Plus, Check, Circle, Truck, User } from "lucide-react";
+import { api } from "@/src/services/api";
 
 export default function NewMission() {
-
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
-  const [type, setType] = useState("COLLECTE");
-  const [name, setName] = useState("");
-  const [depart, setDepart] = useState("");
-  const [destination, setDestination] = useState("");
+  // Form states
+  const [city, setCity] = useState("");
+  const [district, setDistrict] = useState("");
+  const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState("NORMAL");
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 16));
 
-  const [selectedDriver, setSelectedDriver] = useState(null); // Valeur par défaut = null
+  const [drivers, setDrivers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+
   const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
-
-  // MOCK DRIVERS
-  const drivers = [
-    { id: 1, name: "Jean Mba", phone: "6 55 12 34 56", vehicle: "Toyota Hilux" },
-    { id: 2, name: "Marie Ngono", phone: "6 77 89 10 11", vehicle: "Renault Master" },
-    { id: 3, name: "Paul Tchami", phone: "6 99 87 65 43", vehicle: "Mercedes Sprinter" },
-    { id: 4, name: "Sophie Ndong", phone: "6 66 77 88 99", vehicle: "IVECO Daily" },
-    { id: 5, name: "Charles Essomba", phone: "6 55 44 33 22", vehicle: "Ford Transit" }
-  ];
-
-  const handleSubmit = () => {
-    const payload = {
-      type,
-      name,
-      depart: type === "TOURNEE" ? depart : null,
-      destination,
-      driver: selectedDriver
-    };
-
-    console.log("MISSION:", payload);
-
-    // TODO: appel API
-
-    router.push("/admin/missions");
-  };
-
-  const getNameLabel = () => {
-    if (type === "COLLECTE") return "Code du bac";
-    if (type === "COLLECTEVIP") return "Nom du client";
-    if (type === "TOURNEE") return "Nom du quartier";
-  };
-
-  const handleSelectDriver = (driver) => {
-    setSelectedDriver(driver);
-    setIsDriverModalOpen(false);
-  };
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
 
   useEffect(() => {
-  if (isDriverModalOpen) {
-    document.body.style.overflow = "hidden";
-  } else {
-    document.body.style.overflow = "";
-  }
-}, [isDriverModalOpen]);
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setFetching(true);
+      const [driversData, vehiclesData] = await Promise.all([
+        api.get("/drivers"),
+        api.get("/vehicles")
+      ]);
+      setDrivers(driversData || []);
+      setVehicles(vehiclesData || []);
+    } catch (err) {
+      console.error("Error loading mission data:", err);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedDriver || !selectedVehicle) {
+      alert("Veuillez sélectionner un chauffeur et un véhicule");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const payload = {
+        start: startDate,
+        status: "ON_GOING",
+        driverId: selectedDriver.id,
+        vehicleId: selectedVehicle.id,
+        city,
+        district,
+        description,
+        priority
+      };
+
+      await api.post("/missions", payload);
+      router.push("/admin/missionList");
+    } catch (err) {
+      console.error("Submit error:", err);
+      alert("Erreur lors de la création de la mission");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <>
-      <div className={`p-8 bg-gray-50 min-h-screen transition-all duration-300 ${isDriverModalOpen ? 'blur-sm' : ''}`}>
-        <div className="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+    <div className="p-8 bg-gray-50 min-h-screen">
+      <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-6">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-6">
+          <h1 className="text-2xl font-bold text-gray-800">Assigner une nouvelle mission</h1>
 
-          <h1 className="text-2xl font-bold text-gray-800">
-            Nouvelle Mission
-          </h1>
-
-          {/* TYPE */}
-          <div>
-            <label className="text-sm text-gray-600">Type</label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="input w-full mt-1 text-green-800 font-semibold bg-green-50"
-            >
-              <option value="COLLECTE">Collecte</option>
-              <option value="COLLECTEVIP">Collecte VIP</option>
-              <option value="TOURNEE">Tournée</option>
-            </select>
-          </div>
-
-          {/* NOM */}
-          <div>
-            <label className="text-sm text-gray-600">
-              {getNameLabel()}
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input w-full mt-1"
-            />
-          </div>
-
-          {/* DEPART (UNIQUEMENT TOURNEE) */}
-          {type === "TOURNEE" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-gray-600">
-                Point de départ
-              </label>
+              <label className="text-sm font-semibold text-gray-600">Ville</label>
               <input
-                type="text"
-                value={depart}
-                onChange={(e) => setDepart(e.target.value)}
-                className="input w-full mt-1"
+                type="text" required value={city} onChange={e => setCity(e.target.value)}
+                className="w-full border p-3 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Ex: Douala"
               />
             </div>
-          )}
+            <div>
+              <label className="text-sm font-semibold text-gray-600">Quartier / Zone</label>
+              <input
+                type="text" required value={district} onChange={e => setDistrict(e.target.value)}
+                className="w-full border p-3 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Ex: Akwa"
+              />
+            </div>
+          </div>
 
-          {/* DESTINATION */}
           <div>
-            <label className="text-sm text-gray-600">
-              Destination
-            </label>
+            <label className="text-sm font-semibold text-gray-600">Date et heure de début</label>
             <input
-              type="text"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              className="input w-full mt-1"
+              type="datetime-local" required value={startDate} onChange={e => setStartDate(e.target.value)}
+              className="w-full border p-3 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-green-500"
             />
           </div>
 
-          {/* CHAUFFEUR - BOUTON DE SELECTION CLAIR */}
           <div>
-            <label className="text-sm text-gray-600">
-              Chauffeur
-            </label>
-            
-            {selectedDriver ? (
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-800">
-                  {selectedDriver.name}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsDriverModalOpen(true)}
-                  className="px-4 py-2 text-sm text-green-600 hover:text-green-700 font-medium"
-                >
-                  Modifier
-                </button>
-              </div>
-            ) : (
+            <label className="text-sm font-semibold text-gray-600">Description / Instructions</label>
+            <textarea
+              rows="3" value={description} onChange={e => setDescription(e.target.value)}
+              className="w-full border p-3 rounded-xl mt-1 outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Instructions pour la collecte..."
+            />
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* DRIVER SELECT */}
+            <div className="flex-1">
+              <label className="text-sm font-semibold text-gray-600">Chauffeur</label>
               <button
                 type="button"
                 onClick={() => setIsDriverModalOpen(true)}
-                className="w-full mt-1 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-left hover:border-green-500 hover:bg-green-50 transition-colors group"
+                className={`w-full mt-1 p-4 border-2 rounded-xl text-left transition-all flex items-center gap-3 ${selectedDriver ? "border-green-500 bg-green-50" : "border-dashed border-gray-300 hover:border-green-400"
+                  }`}
               >
-                <div className="flex items-center gap-2">
-                  <svg className="w-5 h-5 text-gray-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span className="text-gray-500 group-hover:text-green-600">
-                    Sélectionner un chauffeur
-                  </span>
+                <div className="bg-white p-2 rounded-lg shadow-sm border"><User size={20} className="text-green-600" /></div>
+                <div>
+                  <p className="font-bold text-gray-800">{selectedDriver ? `${selectedDriver.name} ${selectedDriver.surname || ""}` : "Choisir un chauffeur"}</p>
+                  <p className="text-xs text-gray-500">{selectedDriver ? selectedDriver.phone : "Aucun chauffeur sélectionné"}</p>
                 </div>
               </button>
-            )}
-          </div>
+            </div>
 
-          {/* BUTTONS */}
-          <div className="flex justify-end gap-4 pt-4">
-
-            <button
-              onClick={() => router.back()}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100"
-            >
-              Annuler
-            </button>
-
-            <button
-              onClick={handleSubmit}
-              className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
-            >
-              Attribuer
-            </button>
-
-          </div>
-
-        </div>
-      </div>
-
-      {/* MODAL - LISTE DES CHAUFFEURS AVEC BLUR BACKGROUND */}
-      {isDriverModalOpen && (
-        <>
-          {/* Overlay flou transparent */}
-          <div
-            className="fixed inset-0 bg-white/30 backdrop-blur-md z-40"
-            onClick={() => setIsDriverModalOpen(false)}
-          />
-
-          {/* Modal centrée - sans flou */}
-          <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
-            <div
-              className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-200 pointer-events-auto"
-            >
-              {/* Header */}
-              <div className="flex justify-between items-center p-6 border-b">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  Choisir un chauffeur
-                </h2>
-                <button
-                  onClick={() => setIsDriverModalOpen(false)}
-                  className="text-gray-500 hover:text-gray-700 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Liste */}
-              <div className="overflow-y-auto flex-1 p-5 space-y-3">
-                {drivers.map((driver) => (
-                  <button
-                    key={driver.id}
-                    onClick={() => handleSelectDriver(driver)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
-                      selectedDriver?.id === driver.id
-                        ? "border-green-500 bg-green-50/80 ring-2 ring-green-400/50"
-                        : "border-gray-200 hover:border-green-400 hover:bg-green-50/50"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-gray-900">{driver.name}</p>
-                        <p className="text-sm text-gray-600 mt-0.5">📞 {driver.phone}</p>
-                        <p className="text-sm text-gray-600">🚛 {driver.vehicle}</p>
-                      </div>
-                      {selectedDriver?.id === driver.id && (
-                        <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Footer */}
-              <div className="p-6 border-t bg-gray-50/80 rounded-b-2xl">
-                <button
-                  onClick={() => setIsDriverModalOpen(false)}
-                  className="w-full px-5 py-3 bg-green-600 text-white font-medium rounded-xl hover:bg-green-700 transition-colors"
-                >
-                  {selectedDriver ? "Confirmer la sélection" : "Fermer"}
-                </button>
-              </div>
+            {/* VEHICLE SELECT */}
+            <div className="flex-1">
+              <label className="text-sm font-semibold text-gray-600">Véhicule</label>
+              <button
+                type="button"
+                onClick={() => setIsVehicleModalOpen(true)}
+                className={`w-full mt-1 p-4 border-2 rounded-xl text-left transition-all flex items-center gap-3 ${selectedVehicle ? "border-green-500 bg-green-50" : "border-dashed border-gray-300 hover:border-green-400"
+                  }`}
+              >
+                <div className="bg-white p-2 rounded-lg shadow-sm border"><Truck size={20} className="text-green-600" /></div>
+                <div>
+                  <p className="font-bold text-gray-800">{selectedVehicle ? selectedVehicle.immatriculation : "Choisir un véhicule"}</p>
+                  <p className="text-xs text-gray-500">{selectedVehicle ? `${selectedVehicle.brand} ${selectedVehicle.model}` : "Aucun véhicule sélectionné"}</p>
+                </div>
+              </button>
             </div>
           </div>
-        </>
+
+          <div className="flex justify-end gap-4 mt-4">
+            <button type="button" onClick={() => router.back()} className="px-6 py-2 border rounded-xl hover:bg-gray-100 transition">Annuler</button>
+            <button type="submit" disabled={loading} className="px-8 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition flex items-center gap-2">
+              {loading && <Loader2 className="animate-spin" size={18} />}
+              Créer la mission
+            </button>
+          </div>
+        </div>
+      </form>
+
+      {/* DRIVER MODAL */}
+      {isDriverModalOpen && (
+        <SelectionModal
+          title="Sélectionner un chauffeur"
+          items={drivers}
+          selectedId={selectedDriver?.id}
+          onSelect={(d) => { setSelectedDriver(d); setIsDriverModalOpen(false); }}
+          onClose={() => setIsDriverModalOpen(false)}
+          renderItem={(d) => (
+            <div className="flex flex-col">
+              <p className="font-bold">{d.name} {d.surname}</p>
+              <p className="text-xs text-gray-500">{d.phone}</p>
+            </div>
+          )}
+        />
       )}
-    </>
+
+      {/* VEHICLE MODAL */}
+      {isVehicleModalOpen && (
+        <SelectionModal
+          title="Sélectionner un véhicule"
+          items={vehicles}
+          selectedId={selectedVehicle?.id}
+          onSelect={(v) => { setSelectedVehicle(v); setIsVehicleModalOpen(false); }}
+          onClose={() => setIsVehicleModalOpen(false)}
+          renderItem={(v) => (
+            <div className="flex flex-col">
+              <p className="font-bold">{v.immatriculation}</p>
+              <p className="text-xs text-gray-500">{v.brand} {v.model}</p>
+            </div>
+          )}
+        />
+      )}
+    </div>
+  );
+}
+
+function SelectionModal({ title, items, selectedId, onSelect, onClose, renderItem }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="bg-white rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col relative z-10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="p-6 border-b flex justify-between items-center">
+          <h2 className="text-xl font-bold text-gray-800">{title}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition">✕</button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {items.length === 0 ? (
+            <p className="text-center py-10 text-gray-400">Aucune donnée disponible</p>
+          ) : (
+            items.map(item => (
+              <button
+                key={item.id}
+                onClick={() => onSelect(item)}
+                className={`w-full text-left p-4 rounded-2xl flex items-center justify-between border transition-all ${selectedId === item.id ? "border-green-500 bg-green-50" : "border-gray-100 hover:border-green-300 hover:bg-gray-50"
+                  }`}
+              >
+                {renderItem(item)}
+                {selectedId === item.id ? <Check className="text-green-600" /> : <Circle className="text-gray-200" />}
+              </button>
+            ))
+          )}
+        </div>
+        <div className="p-4 border-t bg-gray-50">
+          <button onClick={onClose} className="w-full py-3 bg-white border font-bold rounded-2xl hover:bg-gray-100 transition">Fermer</button>
+        </div>
+      </div>
+    </div>
   );
 }
